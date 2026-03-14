@@ -38,7 +38,7 @@ export interface Product {
 
 export const WHATSAPP_NUMBER = "8613851920376";
 export const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}`;
-export const EMAIL = "info@surveyequiphub.com";
+export const EMAIL = "18100601781@163.com";
 
 export const brands: Brand[] = [
   {

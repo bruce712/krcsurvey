@@ -29,7 +29,7 @@ export default function Contact() {
     }
   }, [preselectedProduct]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.message) {
       toast.error("Please fill in required fields (Name, Email, Message).");
@@ -37,27 +37,34 @@ export default function Contact() {
     }
     setSending(true);
 
-    // Build mailto link as fallback (static site)
-    const subject = encodeURIComponent(`Inquiry: ${form.product || "Surveying Equipment"}`);
-    const body = encodeURIComponent(
-      `Name: ${form.name}\nEmail: ${form.email}\nCompany: ${form.company}\nCountry: ${form.country}\nPhone: ${form.phone}\nProduct: ${form.product}\nQuantity: ${form.quantity}\n\nMessage:\n${form.message}`
-    );
+    try {
+      const response = await fetch("https://formspree.io/f/xojnbblz", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({
+          ...form,
+          Subject: "New Inquiry from KRCSurvey"
+        })
+      });
 
-    // Save UTM params from URL if present
-    const utmParams = new URLSearchParams(window.location.search);
-    const utmData = {
-      utm_source: utmParams.get("utm_source") || "",
-      utm_medium: utmParams.get("utm_medium") || "",
-      utm_campaign: utmParams.get("utm_campaign") || "",
-    };
-
-    // For a static site, we open mailto
-    window.open(`mailto:${EMAIL}?subject=${subject}&body=${body}`, "_self");
-
-    setTimeout(() => {
+      if (response.ok) {
+        setSubmitted(true);
+      } else {
+        const data = await response.json();
+        if (Object.hasOwn(data, 'errors')) {
+          toast.error(data["errors"].map((error: any) => error["message"]).join(", "));
+        } else {
+          toast.error("Oops! There was a problem submitting your form");
+        }
+      }
+    } catch (error) {
+      toast.error("Oops! There was a problem submitting your form");
+    } finally {
       setSending(false);
-      setSubmitted(true);
-    }, 500);
+    }
   };
 
   if (submitted) {
@@ -81,8 +88,8 @@ export default function Contact() {
             </motion.div>
             <h2 className="text-2xl font-bold text-navy mb-3">Thank You for Your Inquiry</h2>
             <p className="text-steel mb-6">
-              Your email client should have opened with the inquiry details. If it didn't, 
-              please send your inquiry directly to <a href={`mailto:${EMAIL}`} className="text-signal hover:underline">{EMAIL}</a>.
+              Your inquiry has been sent successfully. We will get back to you within 24 hours.
+              If you have urgent questions, please contact us directly at <a href={`mailto:${EMAIL}`} className="text-signal hover:underline">{EMAIL}</a>.
             </p>
             <p className="text-steel mb-8">
               For faster response, you can also reach us on WhatsApp:
@@ -124,7 +131,13 @@ export default function Contact() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Form */}
             <div className="lg:col-span-2">
-              <form onSubmit={handleSubmit} className="bg-white border border-border rounded-sm p-6 md:p-8 space-y-5">
+              <form 
+                onSubmit={handleSubmit}
+                action="https://formspree.io/f/xojnbblz"
+                method="POST"
+                className="bg-white border border-border rounded-sm p-6 md:p-8 space-y-5"
+              >
+                <input type="hidden" name="Subject" value="New Inquiry from KRCSurvey" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-sm font-medium text-navy mb-1.5">
@@ -132,6 +145,7 @@ export default function Contact() {
                     </label>
                     <input
                       type="text"
+                      name="name"
                       required
                       value={form.name}
                       onChange={e => setForm({ ...form, name: e.target.value })}
@@ -145,6 +159,7 @@ export default function Contact() {
                     </label>
                     <input
                       type="email"
+                      name="email"
                       required
                       value={form.email}
                       onChange={e => setForm({ ...form, email: e.target.value })}
@@ -159,6 +174,7 @@ export default function Contact() {
                     <label className="block text-sm font-medium text-navy mb-1.5">Company</label>
                     <input
                       type="text"
+                      name="company"
                       value={form.company}
                       onChange={e => setForm({ ...form, company: e.target.value })}
                       className="w-full px-4 py-2.5 text-sm border border-border rounded-sm bg-cool-white focus:outline-none focus:border-signal"
@@ -169,6 +185,7 @@ export default function Contact() {
                     <label className="block text-sm font-medium text-navy mb-1.5">Country</label>
                     <input
                       type="text"
+                      name="country"
                       value={form.country}
                       onChange={e => setForm({ ...form, country: e.target.value })}
                       className="w-full px-4 py-2.5 text-sm border border-border rounded-sm bg-cool-white focus:outline-none focus:border-signal"
@@ -182,6 +199,7 @@ export default function Contact() {
                     <label className="block text-sm font-medium text-navy mb-1.5">Phone / WhatsApp</label>
                     <input
                       type="text"
+                      name="phone"
                       value={form.phone}
                       onChange={e => setForm({ ...form, phone: e.target.value })}
                       className="w-full px-4 py-2.5 text-sm border border-border rounded-sm bg-cool-white focus:outline-none focus:border-signal"
@@ -192,6 +210,7 @@ export default function Contact() {
                     <label className="block text-sm font-medium text-navy mb-1.5">Quantity</label>
                     <input
                       type="text"
+                      name="quantity"
                       value={form.quantity}
                       onChange={e => setForm({ ...form, quantity: e.target.value })}
                       className="w-full px-4 py-2.5 text-sm border border-border rounded-sm bg-cool-white focus:outline-none focus:border-signal"
@@ -203,6 +222,7 @@ export default function Contact() {
                 <div>
                   <label className="block text-sm font-medium text-navy mb-1.5">Product of Interest</label>
                   <select
+                    name="product"
                     value={form.product}
                     onChange={e => setForm({ ...form, product: e.target.value })}
                     className="w-full px-4 py-2.5 text-sm border border-border rounded-sm bg-cool-white focus:outline-none focus:border-signal"
@@ -227,6 +247,7 @@ export default function Contact() {
                     Message <span className="text-red-500">*</span>
                   </label>
                   <textarea
+                    name="message"
                     required
                     rows={5}
                     value={form.message}
@@ -265,7 +286,7 @@ export default function Contact() {
                     <MessageCircle className="w-5 h-5 text-[#25D366]" />
                     <div>
                       <div className="text-sm font-medium text-navy">WhatsApp</div>
-                      <div className="text-xs text-steel font-mono">+{WHATSAPP_NUMBER}</div>
+                      <div className="text-xs text-steel">{WHATSAPP_NUMBER}</div>
                     </div>
                   </a>
                   <a
@@ -281,31 +302,26 @@ export default function Contact() {
                 </div>
               </div>
 
-              {/* Info */}
-              <div className="bg-navy rounded-sm p-6">
-                <h3 className="text-white font-bold text-sm mb-3">What to Include</h3>
-                <ul className="space-y-2 text-sm text-white/60">
-                  <li className="flex items-start gap-2">
-                    <span className="text-signal mt-0.5">1.</span>
-                    Product model(s) you are interested in
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-signal mt-0.5">2.</span>
-                    Quantity needed (sample or bulk)
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-signal mt-0.5">3.</span>
-                    Destination country for shipping
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-signal mt-0.5">4.</span>
-                    Package preference (unit only or full set)
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-signal mt-0.5">5.</span>
-                    Any special requirements
-                  </li>
-                </ul>
+              {/* Working Hours */}
+              <div className="bg-white border border-border rounded-sm p-6">
+                <h3 className="text-lg font-bold text-navy mb-3">Working Hours</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-steel">Mon - Fri</span>
+                    <span className="text-navy font-medium">9:00 - 18:00</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-steel">Saturday</span>
+                    <span className="text-navy font-medium">10:00 - 15:00</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-steel">Sunday</span>
+                    <span className="text-navy font-medium">Closed</span>
+                  </div>
+                </div>
+                <p className="text-xs text-steel mt-4 italic">
+                  * All times in GMT+8. Online support via WhatsApp is available outside regular hours.
+                </p>
               </div>
             </div>
           </div>
